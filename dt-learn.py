@@ -4,8 +4,6 @@ from numpy  import *
 import operator
 import sys
 import arff
-import random
-from matplotlib import pyplot as plt
 
 
 class TreeNode:
@@ -22,8 +20,13 @@ class TreeNode:
 
     def getSizeOfEachClass(self):
         ans = " ["
-        for key in self.numberEachClass:
-            ans += str(self.numberEachClass[key]) + " "
+        self.c = 0
+        for key in labels[-1][1]:
+            if self.c == 0:
+                self.c = 2 
+                ans += str(self.numberEachClass[key])
+            else:
+                ans += " "+str(self.numberEachClass[key])
         ans = ans + "] "
         return ans
 
@@ -88,7 +91,7 @@ def getClassification(classificationList):
             if y == featureVals[i]:
                 py = i
         return px - py
-    sortedClass = sorted(classes.iteritems(), key=operator.itemgetter(1), cmp=func)
+    sortedClass = sorted(classes.iteritems(), cmp=func, key=operator.itemgetter(0))
     sortedClass = sorted(sortedClass, key=operator.itemgetter(1), reverse=True)
     return sortedClass[0][0]
 
@@ -301,11 +304,9 @@ def dfs(root, string):
 
 train_file = 'diabetes_train.arff'
 test_file = 'diabetes_test.arff'
-
 m = 20
 
 
-proportion = [5,10,20,50,100]
 originalDataSet = arff.load(open(train_file, 'rb'))
 dataSet = originalDataSet['data']
 classes = set([data[-1] for data in dataSet])
@@ -314,49 +315,24 @@ label2Axis = {}
 for i in range(len(labels)):
     label2Axis[labels[i][0]] = i
 
-xAxis = []
-yAxis = []
-for p in proportion:
-    size = len(dataSet) * p / 100
-    random_total_list = [i for i in range(len(dataSet))]
-    total_accuracy = 0.0
-    for time in range(10):
-        random_sample_list = random.sample(random_total_list, size)
-        print "size %d out of %d" %(size, len(dataSet))
 
-        temp_dataSet = [dataSet[i] for i in random_sample_list]
-        
-        root = createTree(temp_dataSet,labels,m)
+root = createTree(dataSet,labels,m)
 
-        originalTestDataSet = arff.load(open(test_file,'rb'))
-        dataSet = originalDataSet['data']
-        count = 0
-        for data in dataSet:
-            realClassification = data[-1]
-            resClassification = classify(data,root)
-
-            if realClassification == resClassification:
-                count += 1
-        accuracy = 1.0 * count / len(dataSet)
-        total_accuracy += accuracy
-    total_accuracy /= (time + 1)
-    
-    s = str(p)
-    xAxis.append(s)
-    yAxis.append(total_accuracy)
-
-
-print xAxis
-print yAxis
-
-title = "m = " + str(m) + " for diabetes"
-plt.title(title)
-plt.xlabel('percentage of instances')
-plt.ylabel('accuracy rate')
-plt.ylim(0,1)
-plt.scatter(xAxis,yAxis)
-
-plt.show()
+dfs(root,"")
 
 
 
+print "<Predictions for the Test Set Instances>"
+originalTestDataSet = arff.load(open(test_file,'rb'))
+dataSet = originalTestDataSet['data']
+count = 0
+for i in range(len(dataSet)):
+    data = dataSet[i]
+    realClassification = data[-1]
+    resClassification = classify(data,root)
+    print "%3d: Actual: %s  Predicted: %s" %((i+1),realClassification, resClassification)
+    if realClassification == resClassification:
+        count += 1
+accuracy = 1.0 * count / len(dataSet)
+print "Number of correctly classified: %d  Total number of test instances: %d" \
+      %(count,len(dataSet))
